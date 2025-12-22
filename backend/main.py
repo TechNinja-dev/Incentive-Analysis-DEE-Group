@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 from typing import List,Optional
 from fastapi.middleware.cors import CORSMiddleware
+from incentive import calculate
 
 app = FastAPI()
 app.add_middleware(
@@ -23,10 +24,13 @@ class CarData(BaseModel):
 class IncentiveRequest(BaseModel):
     target: int
     tenure: Optional[int] = None
+    total_quantity: int
     cars: List[CarData]
 
 
 
 @app.post("/incentives")
 def receive_incentives(data: IncentiveRequest):
-    print(data)
+    print("🔥 INCENTIVE API HIT")
+
+    return calculate(data)
