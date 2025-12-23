@@ -26,6 +26,8 @@ const incentiveAmount = {
   Alcazar: 5000
 };
 
+const slab_amt=[2,2,2,2,2,2,2,1,1];
+
 export default function Dashboard() {
   const [target, setTarget] = useState(0);
   const [tenure, setTenure] = useState(null);
@@ -33,8 +35,11 @@ export default function Dashboard() {
   const [menuOpen, setMenuOpen] = useState(false);
 
   const [data, setData] = useState(
-    carList.reduce((acc, car) => {
-      acc[car] = { quantity: 0, minSlab: 2 };
+    carList.reduce((acc, car, index) => {
+      acc[car] = {
+        quantity: 0,
+        minSlab: slab_amt[index] ?? 2 // fallback safety
+      };
       return acc;
     }, {})
   );
