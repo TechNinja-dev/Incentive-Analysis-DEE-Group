@@ -2,6 +2,10 @@ from passlib.context import CryptContext
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
+def normalize_password(password: str) -> str:
+    # strip whitespace and enforce bcrypt limit
+    return password.strip()[:72]
+
 def hash_password(password: str) -> str:
     password = normalize_password(password)
     return pwd_context.hash(password)
