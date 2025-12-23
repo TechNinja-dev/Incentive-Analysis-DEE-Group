@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState ,useEffect} from "react";
 import { Link } from "react-router-dom";
 import logo from "./assets/dee.png";
 
@@ -14,17 +14,7 @@ const carList = [
   "Creta"
 ];
 
-const incentiveAmount = {
-  Nios: 1500,
-  i20: 1000,
-  Exter: 1000,
-  Aura: 1000,
-  Aura_CNG: 1000,
-  Venue: 1500,
-  Verna: 1000,
-  Creta: 3000,
-  Alcazar: 5000
-};
+
 
 const slab_amt=[2,2,2,2,2,2,2,1,1];
 
@@ -33,20 +23,67 @@ export default function Dashboard() {
   const [tenure, setTenure] = useState(null);
   const [incentiveResult, setIncentiveResult] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [name, setName] = useState("");
+  const [incentiveAmount, setIncentiveAmount] = useState({});
+  const [overall_amt,setOverallAmount]=useState(0);
+
+
+  useEffect(() => {
+  const auth = sessionStorage.getItem("isAuthenticated");
+  const name = sessionStorage.getItem("name");
+
+      if (auth === "true") {
+        setIsAuthenticated(true);
+        setName(name);
+      }
+  }, []);
 
   const [data, setData] = useState(
-    carList.reduce((acc, car, index) => {
+    carList.reduce((acc, car) => {
       acc[car] = {
         quantity: 0,
-        minSlab: slab_amt[index] ?? 2 // fallback safety
+        minSlab: 1
       };
       return acc;
     }, {})
   );
 
+  useEffect(() => {
+  const loadConfig = async () => {
+    try {
+      const res = await fetch("http://localhost:8000/load/latest");
+      const result = await res.json();
+      const configs = result.configs || {};
+
+      const newData = {};
+      const newAmounts = {};
+
+      carList.forEach((car) => {
+        newData[car] = {
+          quantity: 0,
+          minSlab: configs[car]?.min_slab ?? 1
+        };
+
+        newAmounts[car] = configs[car]?.amount ?? 0;
+      });
+
+      setData(newData);
+      setIncentiveAmount(newAmounts);
+      setOverallAmount(result.overall_amt)
+    } catch (err) {
+      console.error("Failed to load config", err);
+    }
+  };
+
+  loadConfig();
+}, []);
+
+
+
   const calculateTotalAmount = (qty, slab, amt) => {
     if (qty < slab) return 0;
-    return Math.floor(qty / slab) * slab * amt;
+    return Math.floor(qty / slab) * slab * amt || 0;
   };
 
   const handleClear = () => {
@@ -259,6 +296,15 @@ const handleSubmit = async () => {
 
         {/* RIGHT PANEL */}
         <div className="w-80 flex flex-col gap-4">
+            {/* ===== OVERALL AMOUNT BOX ===== */}
+            <div className="bg-white rounded-2xl shadow p-4">
+              <label className="block font-semibold mb-2">
+                Overall Amount
+              </label>
+              <div className="w-full h-10 border rounded-md px-3 flex items-center bg-gray-50 font-semibold">
+                ₹ {overall_amt}
+              </div>
+            </div>
           <div
             className={`bg-white rounded-2xl shadow p-4 ${
               !isTenureEditable ? "opacity-50 pointer-events-none" : ""

@@ -1,12 +1,15 @@
 from fastapi import FastAPI,HTTPException
 from pydantic import BaseModel,EmailStr
-from typing import List,Optional
+from typing import List,Optional,Dict
 from fastapi.middleware.cors import CORSMiddleware
 from incentive import calculate
 from encryption import hash_password,verify_password
 import os
+from datetime import datetime
+import requests
+
 from dotenv import load_dotenv
-from pymongo import MongoClient
+from pymongo import MongoClient,DESCENDING
 
 load_dotenv()
 app = FastAPI()
@@ -20,7 +23,9 @@ app.add_middleware(
 
 conn=MongoClient(os.getenv("mongo_uri"))
 db=conn["DEE_Employee"]
-coll=db["Employee"]
+coll_admin=db["Admin"]
+car_details=db["Cars_Details"]
+gbl_amt=db['Global_Amount']
 
 
 
@@ -45,28 +50,50 @@ class LoginRequest(BaseModel):
     email: EmailStr
     password: str
 
+class AdminCreate(BaseModel):
+    name: str
+    email: EmailStr
+    password: str
 
-@app.post("/signup")
-def signup(data: SignupRequest):
-    # check if user already exists
-    existing_user = coll.find_one({"email": data.email})
-    if existing_user:
-        raise HTTPException(status_code=400, detail="Email already registered")
+class CarConfig(BaseModel):
+    min_slab: int
+    amount: int
 
-    hashed_pwd = hash_password(data.password)
+class Record(BaseModel):
+    month:str
+    overall_amt:int
+    configs: Dict[str,CarConfig]
 
-    coll.insert_one({
-        "name":data.name,
+
+class ContactRequest(BaseModel):
+    full_name: str
+    email: str
+    subject: str
+    message: str
+
+
+
+@app.post("/addAdmin")
+def add_admin(data: AdminCreate):
+    existing = coll_admin.find_one({"email": data.email})
+
+    if existing:
+        raise HTTPException(status_code=400, detail="Admin already exists")
+
+    hashed_pw = hash_password(data.password)
+
+    coll_admin.insert_one({
+        "name": data.name,
         "email": data.email,
-        "password": hashed_pwd
+        "password": hashed_pw
     })
 
-    return {"message": "Signup successful"}
+    return {"message": "Admin created successfully"}
 
 
 @app.post("/login")
 def login(data: LoginRequest):
-    user = coll.find_one({"email": data.email})
+    user = coll_admin.find_one({"email": data.email})
 
     if not user:
         raise HTTPException(status_code=401, detail="Invalid email or password")
@@ -76,6 +103,7 @@ def login(data: LoginRequest):
 
     return {
         "message": "Login successful",
+        "name":user['name'],
         "email": user["email"]
     }
 
@@ -86,3 +114,62 @@ def receive_incentives(data: IncentiveRequest):
     print("🔥 INCENTIVE API HIT")
 
     return calculate(data)
+
+@app.post("/load")
+def load_record(data: Record):
+    latest = car_details.find_one({}, sort=[("month", DESCENDING)])
+
+    # 🔑 convert CarConfig objects to dict
+    configs_dict = {
+        car: cfg.dict()
+        for car, cfg in data.configs.items()
+    }
+
+    gbl_amt.update_one(
+        {"month": data.month},
+        {"$set": {"month": data.month, "amount": data.overall_amt}},
+        upsert=True
+    )
+    if latest and latest["month"] == data.month:
+        car_details.update_one(
+            {"_id": latest["_id"]},
+            {"$set": {"configs": configs_dict}}
+        )
+        return {"message": "Existing month updated"}
+
+    car_details.insert_one({
+        "month": data.month,
+        "configs": configs_dict
+    })
+
+
+    return {"message": "New month record inserted"}
+
+
+
+@app.get("/load/latest")
+def get_latest_config():
+    latest = car_details.find_one(
+        {},
+        projection={"_id": 0, "configs": 1},
+        sort=[("month", DESCENDING)]
+    )
+
+    if not latest:
+        return {"configs": {}, "overall_amt": 0}
+
+    overall_doc = gbl_amt.find_one(
+        {},
+        sort=[("month", DESCENDING)],
+        projection={"_id": 0, "amount": 1}
+    )
+
+    latest["overall_amt"] = overall_doc["amount"] if overall_doc else 0
+
+    return latest
+
+
+
+
+
+    
