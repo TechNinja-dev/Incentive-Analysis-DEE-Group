@@ -52,7 +52,7 @@ export default function Dashboard() {
   useEffect(() => {
   const loadConfig = async () => {
     try {
-      const res = await fetch("http://localhost:8000/load/latest");
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/load/latest`);
       const result = await res.json();
       const configs = result.configs || {};
 
@@ -141,7 +141,7 @@ const handleSubmit = async () => {
 
     console.log("📦 Payload:", payload);
 
-    const res = await fetch("http://localhost:8000/incentives", {
+    const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/incentives`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include", 

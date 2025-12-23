@@ -43,7 +43,7 @@ export default function Admin() {
     try {
       setLoading(true);
 
-      const res = await fetch("http://localhost:8000/login", {
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
