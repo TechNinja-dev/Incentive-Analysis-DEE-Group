@@ -1,7 +1,15 @@
 fastapi
 uvicorn
-pymongo
+
+pydantic[email]
+email-validator
+
 python-dotenv
-bcrypt
+
+pymongo
+dnspython
+
 passlib[bcrypt]
+bcrypt
+
 requests
