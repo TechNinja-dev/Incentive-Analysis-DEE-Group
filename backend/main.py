@@ -23,6 +23,8 @@ app.add_middleware(
 )
 
 conn=MongoClient(os.getenv("mongo_uri"))
+if conn:
+    print("CONNECTED TO MONGO")
 db=conn["DEE_Employee"]
 coll_admin=db["Admin"]
 car_details=db["Cars_Details"]
@@ -150,24 +152,28 @@ def load_record(data: Record):
 
 @app.get("/load/latest")
 def get_latest_config():
-    latest = car_details.find_one(
-        {},
-        projection={"_id": 0, "configs": 1},
-        sort=[("month", DESCENDING)]
-    )
-
-    if not latest:
-        return {"configs": {}, "overall_amt": 0}
-
-    overall_doc = gbl_amt.find_one(
+    latest_config = car_details.find_one(
         {},
         sort=[("month", DESCENDING)],
+        projection={"_id": 0, "configs": 1, "month": 1}
+    )
+
+    if not latest_config:
+        return {
+            "configs": {},
+            "overall_amt": 0
+        }
+
+    latest_amt = gbl_amt.find_one(
+        {"month": latest_config["month"]},
         projection={"_id": 0, "amount": 1}
     )
 
-    latest["overall_amt"] = overall_doc["amount"] if overall_doc else 0
+    return {
+        "configs": latest_config.get("configs", {}),
+        "overall_amt": latest_amt["amount"] if latest_amt else 0
+    }
 
-    return latest
 
 
 
