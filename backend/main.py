@@ -101,6 +101,9 @@ def login(data: LoginRequest):
     if not user:
         raise HTTPException(status_code=401, detail="Invalid email or password")
 
+    if len(data.password.encode("utf-8")) > 72:
+        raise HTTPException(status_code=400, detail="Invalid password length")
+
     if not verify_password(data.password, user["password"]):
         raise HTTPException(status_code=401, detail="Invalid email or password")
 
