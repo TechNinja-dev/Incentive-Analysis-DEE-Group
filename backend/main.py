@@ -75,10 +75,33 @@ class ContactRequest(BaseModel):
     message: str
 
 
-@app.get("/")
+@app.api_route("/", methods=["GET", "HEAD"])
 def health():
     return {"status": "ok"}
 
+@app.get("/load/latest")
+def get_latest_config():
+    latest_config = car_details.find_one(
+        {},
+        sort=[("month", DESCENDING)],
+        projection={"_id": 0, "configs": 1, "month": 1}
+    )
+
+    if not latest_config:
+        return {
+            "configs": {},
+            "overall_amt": 0
+        }
+
+    latest_amt = gbl_amt.find_one(
+        {"month": latest_config["month"]},
+        projection={"_id": 0, "amount": 1}
+    )
+
+    return {
+        "configs": latest_config.get("configs", {}),
+        "overall_amt": latest_amt["amount"] if latest_amt else 0
+    }
 
 
 @app.post("/addAdmin")
@@ -158,29 +181,7 @@ def load_record(data: Record):
 
 
 
-@app.get("/load/latest")
-def get_latest_config():
-    latest_config = car_details.find_one(
-        {},
-        sort=[("month", DESCENDING)],
-        projection={"_id": 0, "configs": 1, "month": 1}
-    )
 
-    if not latest_config:
-        return {
-            "configs": {},
-            "overall_amt": 0
-        }
-
-    latest_amt = gbl_amt.find_one(
-        {"month": latest_config["month"]},
-        projection={"_id": 0, "amount": 1}
-    )
-
-    return {
-        "configs": latest_config.get("configs", {}),
-        "overall_amt": latest_amt["amount"] if latest_amt else 0
-    }
 
 
 
