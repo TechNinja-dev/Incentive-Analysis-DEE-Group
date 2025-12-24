@@ -75,6 +75,11 @@ class ContactRequest(BaseModel):
     message: str
 
 
+@app.get("/")
+def health():
+    return {"status": "ok"}
+
+
 
 @app.post("/addAdmin")
 def add_admin(data: AdminCreate):
