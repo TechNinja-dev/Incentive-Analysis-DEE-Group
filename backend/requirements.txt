@@ -8,6 +8,8 @@ python-dotenv
 
 pymongo
 dnspython
+passlib[argon2]
+argon2-cffi
 
 passlib[bcrypt]
 bcrypt
